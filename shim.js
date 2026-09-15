@@ -144,7 +144,29 @@
   };
 
   // 首次访问提示（复用页面自带 toast 样式）
+  // 本机训练次数统计（设置弹窗里的仪表盘行）
+  function updateLocalStats() {
+    var el = document.getElementById('local-stats-line');
+    if (!el) return;
+    var list = readJSON(LS_HISTORY, []);
+    var total = 0;
+    list.forEach(function (x) { total += (x.totalTrades || 0); });
+    el.textContent = '本机已累计 ' + list.length + ' 次训练 · ' + total + ' 笔买卖决策（仅保存在本机）';
+  }
+  document.addEventListener('click', function (e) {
+    var id = e.target && e.target.id;
+    if (id === 'btn-settings' || id === 'btn-history') setTimeout(updateLocalStats, 80);
+  }, true);
+
   document.addEventListener('DOMContentLoaded', function () {
+    // 不蒜子脚本加载失败时隐藏统计行，避免页面留个永远转圈的占位
+    setTimeout(function () {
+      var pv = document.getElementById('busuanzi_value_site_pv');
+      if (pv && pv.textContent === '…') {
+        var line = document.getElementById('site-stats-line');
+        if (line) line.style.display = 'none';
+      }
+    }, 6000);
     if (lsGet('zyweb_seen')) return;
     lsSet('zyweb_seen', '1');
     setTimeout(function () {
