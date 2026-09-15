@@ -87,7 +87,13 @@
         <div class="setting-row checkbox-row"><label><input type="checkbox" id="filter-exclude-st" checked> 排除 ST 股</label></div>
         <div class="setting-row checkbox-row"><label><input type="checkbox" id="filter-exclude-st-star" checked> 排除 *ST 股</label></div>
       </div>
-      <p class="web-note">数据仅供学习交流，不构成投资建议</p>
+      <div class="setting-section">
+        <h4>关于本站</h4>
+        <p class="web-note">数据仅供学习交流，不构成投资建议</p>
+        <p class="web-note" id="site-stats-line">本站累计访问 <span id="busuanzi_value_site_pv">…</span> 次 · <span id="busuanzi_value_site_uv">…</span> 位访客</p>
+        <p class="web-note" id="local-stats-line"></p>
+        <div class="setting-row"><a id="feedback-link" class="feedback-link" href="https://github.com/Nick009133/zhiying/issues" target="_blank" rel="noopener">提建议 / 报问题（点这里）</a></div>
+      </div>
       <div class="modal-actions"><button id="btn-save-settings" class="action-btn btn-buy">保存</button><button id="btn-close-settings" class="action-btn btn-skip">取消</button></div>
     </div>
   </div>
@@ -102,4 +108,5 @@
   <script src="shim.js"></script>
   <script src="lib-lightweight-charts.js"></script>
   <script src="app.js"></script>
+<script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 </body></html>
