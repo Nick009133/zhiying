@@ -1,0 +1,1045 @@
+/* ============================================================
+   智赢K线训练助手 — 「训练舱」视觉体系
+   方向：专业盘感训练终端。炭黑三档表面 + 琥珀主导强调色
+   （琥珀来源：训练起点线 / MA10 / DEA 品牌色），红绿严格留给
+   涨跌与买卖语义，数字一律等宽 tabular-nums。
+   ============================================================ */
+
+/* --- Design Tokens --- */
+:root {
+  /* 表面层次：暖红黑三档（图表面板底色 #150e10 由 app.js 图表主题决定，CSS 向它靠拢） */
+  --bg-primary: #120b0d;
+  --bg-secondary: #181013;
+  --bg-tertiary: #221419;
+  --bg-elevated: #2a1a20;
+  --bg-hover: #33202a;
+
+  --border-color: rgba(255, 220, 220, 0.08);
+  --border-strong: rgba(255, 220, 220, 0.15);
+
+  --text-primary: #ece6e8;
+  --text-secondary: #a89ea3;
+  --text-tertiary: #8a7d82;
+  --text-bright: #ffffff;
+
+  /* 品牌红强调色（与图标/买入同源） */
+  --accent: #f04444;
+  --accent-hover: #ff5a5a;
+  --accent-soft: rgba(240, 68, 68, 0.14);
+  --accent-ring: rgba(240, 68, 68, 0.32);
+
+  /* 涨跌语义（A股：红涨绿跌） */
+  --color-buy: #f04444;
+  --color-buy-hover: #ff5a5a;
+  --color-sell: #21c75d;
+  --color-sell-hover: #2ee06d;
+  --color-skip: #3b82f6;
+  --color-skip-hover: #5a9bff;
+  --color-fast: #ff6b6b;
+  --color-fast-hover: #ff8a8a;
+
+  --color-profit: #f04444;
+  --color-loss: #21c75d;
+
+  --font-mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+  --font-sans: 'Microsoft YaHei', 'Segoe UI', system-ui, sans-serif;
+
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-pop: 0 10px 34px rgba(0, 0, 0, 0.45);
+  --shadow-deep: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+/* --- Reset --- */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* --- Custom Scrollbar --- */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 5px;
+  border: 2px solid var(--bg-primary);
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.24); }
+
+/* --- 键盘可达性：统一焦点环 --- */
+button:focus-visible,
+input:focus-visible,
+.checkbox-row:focus-within {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 1px;
+}
+
+/* ============================================
+   Header - Account Bar
+   总资产为主指标（第一项放大），其余为辅助指标；
+   顶部一道极轻的高光给横条一点体积感。
+   ============================================ */
+#account-bar {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0;
+  height: 62px;
+  min-height: 62px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 20px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.account-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  position: relative;
+  padding: 0 30px;
+}
+
+.account-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 28px;
+  width: 1px;
+  background: var(--border-color);
+}
+
+.account-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  transition: color 0.25s;
+}
+
+.account-value {
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+  line-height: 1.1;
+  transition: color 0.3s;
+}
+
+/* 主指标：总资产 */
+.account-item:first-child .account-label { color: var(--accent); }
+.account-item:first-child .account-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.account-value.positive { color: var(--color-profit); }
+.account-value.negative { color: var(--color-loss); }
+
+/* ============================================
+   Main - Chart Area
+   三图由 app.js 图表主题绘制（底色 #0f1117），
+   面板之间用发丝线分隔，形成「数据浮在深底上」的层次。
+   ============================================ */
+#chart-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.chart-panel {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+#chart-kline { flex: 5; min-height: 220px; position: relative; }
+#chart-volume { flex: 2; min-height: 80px; border-top: 1px solid var(--border-color); }
+#chart-macd { flex: 3; min-height: 110px; border-top: 1px solid var(--border-color); }
+
+/* ============================================
+   Zoom Toolbar（右上角垂直浮窗）
+   ============================================ */
+#zoom-toolbar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  opacity: 0.55;
+  transition: opacity 0.2s;
+  background: rgba(24, 13, 16, 0.85);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  backdrop-filter: blur(8px);
+}
+#zoom-toolbar:hover { opacity: 1; }
+
+#zoom-toolbar button {
+  width: 28px;
+  height: 23px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  font-family: var(--font-mono);
+}
+#zoom-toolbar button:hover {
+  color: var(--text-bright);
+  background: rgba(255, 255, 255, 0.08);
+}
+#zoom-toolbar button:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* --- 面板标题：琥珀短线标记 + 字距 --- */
+.chart-title {
+  position: absolute;
+  top: 9px;
+  left: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--text-secondary);
+  z-index: 20;
+  pointer-events: none;
+  font-family: var(--font-sans);
+}
+
+.chart-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 10px;
+  border-radius: 1.5px;
+  background: var(--accent);
+  opacity: 0.85;
+  margin-right: 7px;
+  vertical-align: -1px;
+}
+
+/* --- Period Toolbar（日/周/月 浮窗分段） --- */
+#period-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 66px;
+  display: flex;
+  z-index: 10;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  background: rgba(24, 13, 16, 0.85);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+  backdrop-filter: blur(8px);
+}
+#period-toolbar:hover { opacity: 1; }
+
+.period-btn {
+  padding: 4px 11px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+  font-family: var(--font-sans);
+}
+.period-btn:hover {
+  color: var(--text-bright);
+  background: rgba(255, 255, 255, 0.08);
+}
+.period-btn.period-active {
+  color: #ffffff;
+  background: var(--accent);
+  font-weight: 700;
+}
+
+/* --- Live Return Rate(右上角账户速览) --- */
+.live-return {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  padding: 0 10px 0 4px;
+}
+
+/* ============================================
+   盘感驾驶舱 - 底部操作栏 v2
+   两行结构：上方 56px 主操作带 + 下方 46px 进度信息带
+   ============================================ */
+#control-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  height: 102px;
+  min-height: 102px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  padding: 0;
+  position: relative;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 220, 0.04),
+    0 -10px 26px rgba(0, 0, 0, 0.42);
+  user-select: none;
+}
+
+/* 主操作行 - 占据上方 56px */
+.control-trade {
+  flex: 0 0 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 130px 0 18px;   /* 右侧 130px 留给悬浮工具组 */
+}
+
+/* 进度信息行 - 占据下方 46px */
+.control-center {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 24px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.22), transparent);
+  border-top: 1px solid var(--border-color);
+}
+
+/* 工具组 - 右上角悬浮,不会与主操作冲突 */
+.control-tools {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+}
+
+/* 仓位比例 - 紧凑 chip 组,与买入键并排,视觉隶属买入 */
+.control-ratio {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--bg-primary);
+  height: 32px;
+}
+
+/* 通用:交易组 / 工具组基础样式 */
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 旧式分隔线:两行结构下隐藏 */
+.control-divider { display: none; }
+
+/* --- 仓位比例 chip(并入买入动作) --- */
+.ratio-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 1px;
+  padding: 0 6px 0 8px;
+}
+.ratio-group {
+  display: flex;
+  height: 100%;
+}
+.ratio-btn {
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ratio-btn + .ratio-btn { border-left: 1px solid var(--border-color); }
+.ratio-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.ratio-btn.ratio-active {
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* --- Buttons v2 盘感驾驶舱 ---
+   买入/卖出 = 主角(44 高 + 16px 字 + 强阴影 + B/S 角标)
+   观望 = 中性描边(W 角标)
+   撤销 = 次级紧凑(U 角标)
+   工具组 = 紧凑小键 28 高 */
+.action-btn {
+  padding: 9px 18px;
+  border: none;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.18s ease, border-color 0.15s ease, color 0.15s ease;
+  font-family: var(--font-sans);
+  letter-spacing: 2px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.action-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 买入:大红色实心,主角光环 */
+.btn-buy {
+  background: linear-gradient(180deg, #ff5a5a, #ef4444);
+  color: white;
+  min-width: 116px;
+  height: 44px;
+  padding: 0 26px;
+  font-size: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 4px 14px rgba(239, 68, 68, 0.34),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.btn-buy:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ff7a7a, #ef4444);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 6px 22px rgba(239, 68, 68, 0.46),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.btn-buy::after {
+  content: 'B';
+  position: absolute;
+  bottom: 3px;
+  right: 8px;
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0;
+  font-family: var(--font-mono);
+}
+
+/* 卖出:大绿色实心,主角光环 */
+.btn-sell {
+  background: linear-gradient(180deg, #2bd96c, #1bb354);
+  color: white;
+  min-width: 116px;
+  height: 44px;
+  padding: 0 26px;
+  font-size: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 4px 14px rgba(34, 197, 94, 0.34),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.btn-sell:hover:not(:disabled) {
+  background: linear-gradient(180deg, #43e882, #1bb354);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 6px 22px rgba(34, 197, 94, 0.46),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.btn-sell::after {
+  content: 'S';
+  position: absolute;
+  bottom: 3px;
+  right: 8px;
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0;
+  font-family: var(--font-mono);
+}
+
+/* 观望:中性描边,视觉权重低于买卖 */
+.btn-skip {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-strong);
+  min-width: 88px;
+  height: 44px;
+  padding: 0 22px;
+  font-size: 15px;
+}
+.btn-skip:hover:not(:disabled) {
+  color: var(--text-bright);
+  border-color: rgba(255, 255, 255, 0.35);
+  background: var(--bg-hover);
+}
+.btn-skip::after {
+  content: 'W';
+  position: absolute;
+  bottom: 5px;
+  right: 10px;
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 220, 220, 0.32);
+  letter-spacing: 0;
+  font-family: var(--font-mono);
+}
+
+/* 撤销:次级紧凑键 */
+.btn-undo {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  font-size: 13px;
+  padding: 0 14px;
+  height: 36px;
+  min-width: 64px;
+  letter-spacing: 1px;
+}
+.btn-undo:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent-ring);
+  background: var(--accent-soft);
+}
+.btn-undo::after {
+  content: 'U';
+  position: absolute;
+  bottom: 4px;
+  right: 7px;
+  font-size: 8px;
+  font-weight: 500;
+  color: rgba(255, 220, 220, 0.30);
+  letter-spacing: 0;
+  font-family: var(--font-mono);
+}
+
+/* 设置/历史:紧凑小键(右上角工具组) */
+.btn-settings, .btn-history {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  font-size: 11px;
+  padding: 0 9px;
+  height: 28px;
+  letter-spacing: 0.5px;
+  border-radius: 6px;
+}
+.btn-settings:hover:not(:disabled),
+.btn-history:hover:not(:disabled) {
+  color: var(--text-bright);
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+/* 新训练:核心动作,琥珀描边提层级(放在工具组最左) */
+.btn-new {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent-ring);
+  font-size: 12px;
+  padding: 0 12px;
+  height: 28px;
+  letter-spacing: 1px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+.btn-new:hover:not(:disabled) {
+  color: var(--accent-hover);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* 进度条 v2 - 变厚,加刻度感和发光 */
+#progress-container {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+#progress-bar {
+  width: 240px;
+  height: 9px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55);
+  position: relative;
+}
+
+#progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #f04444 0%, #ff8888 100%);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(240, 68, 68, 0.5);
+}
+
+#progress-text {
+  font-size: 13px;
+  color: var(--text-bright);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 90px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* --- Toast（语义色实底 + 内高光，深投影） --- */
+.toast {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 26px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), var(--shadow-pop);
+  letter-spacing: 0.5px;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 1.5s forwards;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.toast.buy {
+  background: linear-gradient(180deg, #f25656, #dd3d3d);
+  color: white;
+}
+.toast.sell {
+  background: linear-gradient(180deg, #2bd96c, #1bb354);
+  color: white;
+}
+.toast.skip {
+  background: linear-gradient(180deg, #3a252b, #29191f);
+  color: var(--text-primary);
+}
+.toast.info {
+  background: linear-gradient(180deg, #2c1e23, #1f1519);
+  color: var(--text-bright);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-pop);
+}
+.toast.hidden { display: none; }
+
+@keyframes toastIn {
+  from { opacity: 0; top: -36px; }
+  to { opacity: 1; top: -50px; }
+}
+@keyframes toastOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* --- Flash Effects --- */
+.flash-buy {
+  animation: flashBuy 0.3s ease;
+}
+.flash-sell {
+  animation: flashSell 0.3s ease;
+}
+
+@keyframes flashBuy {
+  0% { background: rgba(240, 68, 68, 0.28); }
+  100% { background: transparent; }
+}
+@keyframes flashSell {
+  0% { background: rgba(33, 199, 93, 0.28); }
+  100% { background: transparent; }
+}
+
+/* ============================================
+   Modals（深色玻璃幕 + 提升卡面）
+   ============================================ */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(4, 5, 8, 0.62);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal.hidden { display: none; }
+
+.modal-content {
+  background: #1a1114;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 26px;
+  min-width: 380px;
+  max-width: 500px;
+  box-shadow: var(--shadow-deep);
+}
+
+.modal-content.modal-wide {
+  min-width: 520px;
+  max-width: 650px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-content h3 {
+  font-size: 16px;
+  margin-bottom: 20px;
+  color: var(--text-bright);
+  letter-spacing: 1px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.setting-row label {
+  min-width: 100px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.setting-row.checkbox-row {
+  min-width: auto;
+}
+
+.setting-row.checkbox-row label {
+  min-width: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.setting-row.checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.setting-section {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.setting-section:last-of-type {
+  border-bottom: none;
+}
+
+.setting-section h4 {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.setting-row input {
+  width: 80px;
+  padding: 7px 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-bright);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  text-align: center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.setting-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.setting-hint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* --- Result Report --- */
+#result-content {
+  color: var(--text-primary);
+}
+
+.result-stock {
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-fast);
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+
+.result-date {
+  font-size: 13px;
+  text-align: center;
+  color: var(--text-tertiary);
+  margin-bottom: 18px;
+}
+
+.result-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.stat-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  padding: 11px 14px;
+  border-radius: 10px;
+  transition: border-color 0.15s;
+}
+
+.stat-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 17px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-bright);
+  margin-top: 3px;
+}
+
+.stat-value.profit { color: var(--color-profit); }
+.stat-value.loss { color: var(--color-loss); }
+
+/* --- History List --- */
+#history-content {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.history-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.history-stock {
+  font-weight: 600;
+  color: var(--text-bright);
+}
+
+.history-date {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.history-pnl {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-empty {
+  text-align: center;
+  color: var(--text-tertiary);
+  padding: 40px;
+}
+
+/* --- Equity Curve in Report --- */
+#equity-chart-container {
+  margin-top: 8px;
+  padding: 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+#equity-chart-container h4 {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+#equity-canvas {
+  width: 100%;
+  max-width: 580px;
+  display: block;
+}
+
+
+/* ============================================
+   网页版新增 · 移动端适配
+   ============================================ */
+.web-note {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin: 10px 0 0;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 860px) {
+  /* 顶栏：横向滑动，不换行 */
+  #account-bar {
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding: 0 8px;
+    height: 54px;
+    min-height: 54px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  #account-bar::-webkit-scrollbar { display: none; }
+  .account-item { padding: 0 14px; min-width: max-content; }
+  .account-item:first-child .account-value { font-size: 17px; }
+  .account-value { font-size: 13px; }
+
+  /* 图表：压缩最小高度，留出操作空间 */
+  #chart-kline { min-height: 190px; }
+  #chart-volume { min-height: 56px; }
+  #chart-macd { min-height: 78px; }
+  .chart-title { font-size: 10px; letter-spacing: 1px; }
+
+  /* 底部操作栏：主操作行 + 工具行 + 进度行 */
+  #control-bar { min-height: 0; height: auto; }
+  .control-trade {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 10px 10px 6px;
+    height: auto;
+    min-height: 0;
+    justify-content: center;
+  }
+  .action-btn {
+    padding: 10px 12px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    border-radius: 8px;
+  }
+  #btn-buy, #btn-sell { min-width: 70px; }
+  #btn-undo { padding: 10px 9px; }
+  .control-ratio { height: 36px; flex: 0 0 auto; }
+  .ratio-btn { padding: 0 7px; font-size: 11px; }
+  .control-tools {
+    position: static;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 2px 10px 8px;
+  }
+  .control-tools .action-btn { padding: 7px 10px; font-size: 12px; }
+  .live-return { font-size: 12px; }
+  .control-center { height: 40px; gap: 8px; padding: 0 12px; }
+
+  /* 弹窗：占满窄屏并可滚动 */
+  .modal-content {
+    width: 94vw;
+    max-width: 94vw;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 16px;
+  }
+}
+
+/* 触屏优化：去点按高亮、放大缩放按钮热区 */
+@media (pointer: coarse) {
+  .action-btn, .ratio-btn, .period-btn, #zoom-toolbar button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  #zoom-toolbar button { width: 34px; height: 30px; }
+  #period-toolbar button { padding: 6px 12px; font-size: 12px; }
+}
