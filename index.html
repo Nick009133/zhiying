@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <link rel="icon" href="icon.png">
+  <title>智赢K线训练助手</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- 顶部账户栏 -->
+  <header id="account-bar">
+    <div class="account-item"><span class="account-label">总资产</span><span class="account-value" id="total-assets">100,000.00</span></div>
+    <div class="account-item"><span class="account-label">持仓市值</span><span class="account-value" id="position-value">0.00</span></div>
+    <div class="account-item"><span class="account-label">可用资金</span><span class="account-value" id="available-cash">100,000.00</span></div>
+    <div class="account-item"><span class="account-label">浮动盈亏</span><span class="account-value" id="floating-pnl">0.00</span></div>
+    <div class="account-item"><span class="account-label">当前持仓</span><span class="account-value" id="position-shares">0 股</span></div>
+    <div class="account-item"><span class="account-label">总收益率</span><span class="account-value" id="return-rate">0.00%</span></div>
+  </header>
+
+  <!-- 图表区 -->
+  <main id="chart-area">
+    <div id="chart-kline" class="chart-panel">
+      <span class="chart-title">K线</span>
+      <div id="zoom-toolbar">
+        <button id="btn-zoom-in" title="放大">＋</button>
+        <button id="btn-zoom-out" title="缩小">－</button>
+        <button id="btn-zoom-fit" title="全屏">⊞</button>
+        <button id="btn-zoom-reset" title="重置">↺</button>
+      </div>
+      <div id="period-toolbar">
+        <button id="btn-period-day" class="period-btn period-active" data-period="day">日线</button>
+        <button id="btn-period-week" class="period-btn" data-period="week">周线</button>
+        <button id="btn-period-month" class="period-btn" data-period="month">月线</button>
+      </div>
+    </div>
+    <div id="chart-volume" class="chart-panel"><span class="chart-title">成交量</span></div>
+    <div id="chart-macd" class="chart-panel"><span class="chart-title">MACD</span></div>
+  </main>
+
+  <!-- 底部操作栏 -->
+  <footer id="control-bar">
+    <div class="control-group control-trade">
+      <button id="btn-buy" class="action-btn btn-buy">买 入</button>
+      <button id="btn-sell" class="action-btn btn-sell">卖 出</button>
+      <button id="btn-skip" class="action-btn btn-skip">观 望</button>
+      <button id="btn-undo" class="action-btn btn-undo" title="撤销 (U)">撤销</button>
+    </div>
+    <div class="control-ratio">
+      <span class="ratio-label">仓位</span>
+      <div class="ratio-group" id="ratio-group">
+        <button class="ratio-btn" data-ratio="0.25">25%</button>
+        <button class="ratio-btn" data-ratio="0.5">50%</button>
+        <button class="ratio-btn" data-ratio="0.75">75%</button>
+        <button class="ratio-btn ratio-active" data-ratio="1">100%</button>
+      </div>
+    </div>
+    <div class="control-divider"></div>
+    <div class="control-center">
+      <div id="progress-container">
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+        <span id="progress-text">0 / 150</span>
+      </div>
+    </div>
+    <div class="control-divider"></div>
+    <div class="control-group control-tools">
+      <span id="live-return" class="live-return">0.00%</span>
+      <button id="btn-settings" class="action-btn btn-settings">设置</button>
+      <button id="btn-new-training" class="action-btn btn-new">新训练</button>
+      <button id="btn-reset-capital" class="action-btn btn-settings">重置资金</button>
+      <button id="btn-history" class="action-btn btn-history">历史</button>
+    </div>
+    <div id="toast" class="toast hidden"></div>
+  </footer>
+
+  <!-- 弹窗 -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>训练设置</h3>
+      <div class="setting-section">
+        <h4>交易参数</h4>
+        <div class="setting-row"><label>止盈比例 (%)</label><input type="number" id="stop-profit" value="0" min="0" max="100" step="0.1"><span class="setting-hint">0=关闭</span></div>
+        <div class="setting-row"><label>止损比例 (%)</label><input type="number" id="stop-loss" value="0" min="0" max="100" step="0.1"><span class="setting-hint">0=关闭</span></div>
+      </div>
+      <div class="setting-section">
+        <h4>股票筛选</h4>
+        <div class="setting-row checkbox-row"><label><input type="checkbox" id="filter-exclude-st" checked> 排除 ST 股</label></div>
+        <div class="setting-row checkbox-row"><label><input type="checkbox" id="filter-exclude-st-star" checked> 排除 *ST 股</label></div>
+      </div>
+      <p class="web-note">数据仅供学习交流，不构成投资建议</p>
+      <div class="modal-actions"><button id="btn-save-settings" class="action-btn btn-buy">保存</button><button id="btn-close-settings" class="action-btn btn-skip">取消</button></div>
+    </div>
+  </div>
+  <div id="result-modal" class="modal hidden">
+    <div class="modal-content modal-wide"><h3>训练复盘报告</h3><div id="result-content"></div><p class="web-note">训练记录保存在本机浏览器中 · 数据仅供学习交流，不构成投资建议</p>
+      <div class="modal-actions"><button id="btn-close-result" class="action-btn btn-buy">确定</button></div></div>
+  </div>
+  <div id="history-modal" class="modal hidden">
+    <div class="modal-content modal-wide"><h3>训练历史</h3><div id="history-content"></div><div class="modal-actions"><button id="btn-close-history" class="action-btn btn-skip">关闭</button></div></div>
+  </div>
+
+  <script src="shim.js"></script>
+  <script src="lib-lightweight-charts.js"></script>
+  <script src="app.js"></script>
+</body></html>
