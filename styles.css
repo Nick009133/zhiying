@@ -1043,3 +1043,17 @@ input:focus-visible,
   #zoom-toolbar button { width: 34px; height: 30px; }
   #period-toolbar button { padding: 6px 12px; font-size: 12px; }
 }
+
+/* ============================================
+   网页版新增 · 仪表盘（设置弹窗内）
+   ============================================ */
+.feedback-link {
+  color: var(--accent);
+  font-size: 13px;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(124, 108, 255, 0.6);
+  padding-bottom: 1px;
+  transition: color 0.15s;
+}
+.feedback-link:hover { color: var(--text-bright); }
+#site-stats-line, #local-stats-line { text-align: left; margin-top: 8px; }
