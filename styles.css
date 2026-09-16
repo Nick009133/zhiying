@@ -970,35 +970,21 @@ input:focus-visible,
   letter-spacing: 0.5px;
 }
 
+/* --- 中屏：底栏改三行普通流式排列，杜绝绝对定位重叠 --- */
 @media (max-width: 860px) {
-  /* 顶栏：横向滑动，不换行 */
-  #account-bar {
-    overflow-x: auto;
-    justify-content: flex-start;
-    padding: 0 8px;
-    height: 54px;
-    min-height: 54px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+  #control-bar {
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    padding-bottom: env(safe-area-inset-bottom);
   }
-  #account-bar::-webkit-scrollbar { display: none; }
-  .account-item { padding: 0 14px; min-width: max-content; }
-  .account-item:first-child .account-value { font-size: 17px; }
-  .account-value { font-size: 13px; }
-
-  /* 图表：压缩最小高度，留出操作空间 */
-  #chart-kline { min-height: 190px; }
-  #chart-volume { min-height: 56px; }
-  #chart-macd { min-height: 78px; }
-  .chart-title { font-size: 10px; letter-spacing: 1px; }
-
-  /* 底部操作栏：主操作行 + 工具行 + 进度行 */
-  #control-bar { min-height: 0; height: auto; }
+  /* 主操作行：不再是绝对定位悬浮 */
   .control-trade {
+    position: static;
     flex: 0 0 auto;
     flex-wrap: nowrap;
     gap: 8px;
-    padding: 10px 10px 6px;
+    padding: 10px 10px 4px;
     height: auto;
     min-height: 0;
     justify-content: center;
@@ -1011,18 +997,57 @@ input:focus-visible,
   }
   #btn-buy, #btn-sell { min-width: 70px; }
   #btn-undo { padding: 10px 9px; }
-  .control-ratio { height: 36px; flex: 0 0 auto; }
+  /* 仓位行：居中显示 */
+  .control-ratio { height: 36px; flex: 0 0 auto; align-self: center; justify-content: center; }
   .ratio-btn { padding: 0 7px; font-size: 11px; }
+
+  /* 工具行：窄屏改网格两行排列，绝不成溢出裁切 */
   .control-tools {
     position: static;
+    display: grid;
+    grid-template-columns: repeat(3, max-content);
     justify-content: center;
-    flex-wrap: wrap;
-    gap: 5px;
-    padding: 2px 10px 8px;
+    justify-items: center;
+    gap: 6px 12px;
+    padding: 2px 8px 6px;
+    max-width: 100%;
   }
-  .control-tools .action-btn { padding: 7px 10px; font-size: 12px; }
-  .live-return { font-size: 12px; }
-  .control-center { height: 40px; gap: 8px; padding: 0 12px; }
+  .control-tools .action-btn { padding: 7px 9px; font-size: 12px; white-space: nowrap; }
+  .live-return { font-size: 12px; padding: 0 4px; }
+
+  /* 进度行：恢复普通文档流；窄屏时进度条独占一行、文字另起一行居中，避免右缘裁切 */
+  .control-center {
+    position: static;
+    height: auto;
+    min-height: 40px;
+    gap: 4px;
+    padding: 2px 12px 8px;
+    background: transparent;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  #progress-container {
+    flex: 1 1 100%;
+    max-width: 420px;
+    min-width: 0;
+    flex-wrap: wrap;
+    row-gap: 2px;
+    justify-content: center;
+  }
+  #progress-bar { flex: 1 1 100%; min-width: 0; }
+  #progress-text {
+    flex: 0 0 100%;
+    min-width: 0;
+    font-size: 11px;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  /* 图表：压缩最小高度，留出操作空间 */
+  #chart-kline { min-height: 200px; }
+  #chart-volume { min-height: 56px; }
+  #chart-macd { min-height: 78px; }
+  .chart-title { font-size: 10px; letter-spacing: 1px; }
 
   /* 弹窗：占满窄屏并可滚动 */
   .modal-content {
@@ -1034,12 +1059,45 @@ input:focus-visible,
   }
 }
 
-/* 触屏优化：去点按高亮、放大缩放按钮热区 */
+/* --- 窄屏（手机竖屏）：顶栏改两行网格，总资产独占第一行 --- */
+@media (max-width: 640px) {
+  #account-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: center;
+    height: auto;
+    min-height: 0;
+    padding: 4px 2px;
+    overflow-x: visible;
+    row-gap: 2px;
+  }
+  .account-item {
+    padding: 3px 10px;
+    min-width: 0;
+    border: none;
+  }
+  .account-item::after { display: none; }
+  .account-item:first-child {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: center;
+    gap: 10px;
+    padding: 2px 0 6px;
+  }
+  .account-item:first-child .account-value { font-size: 20px; }
+  .account-value { font-size: 13px; }
+  .account-label { font-size: 9px; letter-spacing: 1px; }
+}
+
+/* --- 触屏优化：去点按高亮、放大热区 --- */
 @media (pointer: coarse) {
   .action-btn, .ratio-btn, .period-btn, #zoom-toolbar button {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
+  .action-btn { min-height: 44px; }
+  .ratio-btn { height: 40px; }
   #zoom-toolbar button { width: 34px; height: 30px; }
   #period-toolbar button { padding: 6px 12px; font-size: 12px; }
 }
